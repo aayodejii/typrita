@@ -1,8 +1,13 @@
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import { list, put, del } from '@vercel/blob';
 
 const ALLOWED_TYPES = ['text/plain', 'text/markdown', 'text/x-markdown'];
 const MAX_SIZE_BYTES = 500_000; // 500 KB per sample
 const SAMPLE_PREFIX = 'typrita-samples/';
+
+const blobToken = () => process.env.BLOB_READ_WRITE_TOKEN;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,7 +36,7 @@ export default async function handler(req, res) {
 }
 
 async function listSamples(req, res) {
-  const { blobs } = await list({ prefix: SAMPLE_PREFIX });
+  const { blobs } = await list({ prefix: SAMPLE_PREFIX, token: blobToken() });
   const samples = blobs.map((b) => ({
     name: b.pathname.replace(SAMPLE_PREFIX, ''),
     pathname: b.pathname,
@@ -55,25 +60,30 @@ async function uploadSample(req, res) {
     return res.status(400).json({ error: 'Only .txt and .md files are accepted' });
   }
 
-  const chunks = [];
-  let totalSize = 0;
-
-  for await (const chunk of req) {
-    totalSize += chunk.length;
-    if (totalSize > MAX_SIZE_BYTES) {
-      return res.status(413).json({ error: 'File too large. Maximum size is 500 KB.' });
-    }
-    chunks.push(chunk);
+  let body;
+  if (req.body) {
+    body = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+  } else {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    body = Buffer.concat(chunks);
   }
 
-  const body = Buffer.concat(chunks);
+  const totalSize = body.length;
+  if (totalSize > MAX_SIZE_BYTES) {
+    return res.status(413).json({ error: 'File too large. Maximum size is 500 KB.' });
+  }
+
   const safeName = filename.replace(/[^a-zA-Z0-9._\-]/g, '_');
   const pathname = `${SAMPLE_PREFIX}${safeName}`;
 
   const blob = await put(pathname, body, {
-    access: 'public',
+    access: 'private',
     contentType: mimeType,
     addRandomSuffix: false,
+    token: blobToken(),
   });
 
   return res.status(201).json({ blob });
@@ -90,6 +100,6 @@ async function deleteSample(req, res) {
     return res.status(400).json({ error: 'Invalid pathname' });
   }
 
-  await del(pathname);
+  await del(pathname, { token: blobToken() });
   return res.status(200).json({ ok: true });
 }
