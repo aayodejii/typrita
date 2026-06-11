@@ -1,5 +1,8 @@
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import Anthropic from '@anthropic-ai/sdk';
-import { list } from '@vercel/blob';
+import { list, get as blobGet } from '@vercel/blob';
 import { HUMANIZER_RULES } from '../lib/humanizer-rules.js';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -29,14 +32,17 @@ In both modes: output the final text only. No preamble, no "Here is your rewritt
 `.trim();
 
 async function fetchSampleContents() {
-  const { blobs } = await list({ prefix: SAMPLE_PREFIX });
+  const { blobs } = await list({ prefix: SAMPLE_PREFIX, token: process.env.BLOB_READ_WRITE_TOKEN });
   if (blobs.length === 0) return null;
 
   const fetched = await Promise.all(
     blobs.map(async (blob) => {
-      const res = await fetch(blob.url);
-      if (!res.ok) return null;
-      const text = await res.text();
+      const result = await blobGet(blob.pathname, {
+        access: 'private',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      if (!result || result.statusCode !== 200) return null;
+      const text = await new Response(result.stream).text();
       const name = blob.pathname.replace(SAMPLE_PREFIX, '');
       return `<sample name="${name}">\n${text.slice(0, 8000)}\n</sample>`;
     })
@@ -52,9 +58,13 @@ export default async function handler(req, res) {
 
   let body;
   try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    body = JSON.parse(Buffer.concat(chunks).toString());
+    if (req.body) {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } else {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      body = JSON.parse(Buffer.concat(chunks).toString());
+    }
   } catch {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
@@ -104,7 +114,7 @@ export default async function handler(req, res) {
 
   try {
     const stream = await anthropic.messages.stream({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt.trim() }],
