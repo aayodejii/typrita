@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
-  const { prompt, tone } = body;
+  const { prompt } = body;
 
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
     return res.status(400).json({ error: 'Missing or empty prompt' });
@@ -78,6 +78,7 @@ export default async function handler(req, res) {
   let sampleContent;
   try {
     sampleContent = await fetchSampleContents();
+    console.log('[generate] samples loaded:', sampleContent ? 'yes' : 'no');
   } catch (err) {
     console.error('[generate] Failed to fetch samples:', err);
     return res.status(500).json({ error: 'Failed to load writing samples' });
@@ -98,12 +99,6 @@ export default async function handler(req, res) {
 
   systemParts.push(TASK_LAYER);
 
-  if (tone && tone !== 'natural') {
-    systemParts.push(
-      `\n\nTone override: "${tone}". Adjust the energy and register of the output accordingly while keeping the humanizer rules and voice calibration in effect.`
-    );
-  }
-
   const systemPrompt = systemParts.join('');
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -113,7 +108,7 @@ export default async function handler(req, res) {
   res.flushHeaders();
 
   try {
-    const stream = await anthropic.messages.stream({
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: systemPrompt,

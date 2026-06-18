@@ -281,7 +281,6 @@ pasteUploadBtn.addEventListener('click', async () => {
 // ============================================================
 
 const promptInput = document.getElementById('prompt-input');
-const toneSelect = document.getElementById('tone-select');
 const generateBtn = document.getElementById('generate-btn');
 const outputArea = document.getElementById('output-area');
 const outputEmpty = document.getElementById('output-empty');
@@ -355,7 +354,7 @@ generateBtn.addEventListener('click', async () => {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, tone: toneSelect.value }),
+      body: JSON.stringify({ prompt }),
     });
 
     if (!res.ok) {
