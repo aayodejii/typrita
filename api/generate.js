@@ -28,16 +28,35 @@ MODE A — REWRITE: The input is existing AI-generated text. Your job is to reco
 
 Do not sand the edges. Rebuild from scratch. The meaning stays. The construction changes entirely.
 
-Hunt these patterns specifically — they are the hardest to catch and must not survive the rewrite:
-- Negative parallelism: "You lose X. You lose Y. You lose Z." Merge or restructure. The repetition is the problem.
-- Symmetrical paragraph cadence: every paragraph opening the same way, closing with a summary sentence. Break the rhythm.
-- Parallel heading structure: headings that follow the same grammatical pattern. Vary them.
-- Rule-of-three lists: any enumeration of exactly three items. Collapse to two, expand to four, or restructure as prose.
-- Anaphora: any sentence that begins the same way as the sentence before it.
+You will receive a pattern map listing every AI signature found in this specific text. Every item on that map must be eliminated. No exceptions.
 
 MODE B — GENERATE: The input is a topic, brief, outline, or description. Write the full piece from scratch. Match the calibrated voice. Apply all humanizer rules throughout.
 
 In both modes: output the final text only. No preamble, no "Here is your rewritten text:", no explanation. Just the result.
+`.trim();
+
+const ANALYSIS_PROMPT = `
+Using the AI writing patterns listed above, analyze the following text.
+
+Determine the mode:
+- REWRITE: the input is existing content (article, essay, email, paragraph) to be humanized
+- GENERATE: the input is a topic, brief, outline, or instruction to write from scratch
+
+If REWRITE, find every single AI pattern instance. Be exhaustive — list each occurrence separately.
+
+Output only this JSON. No prose, no explanation:
+{
+  "mode": "rewrite" | "generate",
+  "patterns": [
+    {
+      "type": "pattern name from the rules above",
+      "instance": "exact quoted text exhibiting the pattern",
+      "fix": "specific instruction to eliminate this instance"
+    }
+  ]
+}
+
+If mode is "generate", patterns is an empty array.
 `.trim();
 
 async function fetchSampleContents() {
@@ -106,20 +125,52 @@ export default async function handler(req, res) {
     );
   }
 
-  systemParts.push(TASK_LAYER);
-
-  const systemPrompt = systemParts.join('');
-
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('X-Accel-Buffering', 'no');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  // Step 1: Analyze the text with adaptive thinking to map every AI pattern
+  res.write('data: [ANALYZING]\n\n');
+
+  let analysis = { mode: 'generate', patterns: [] };
+  try {
+    const analysisRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 6000,
+      thinking: { type: 'adaptive' },
+      system: [HUMANIZER_RULES, ANALYSIS_PROMPT].join('\n\n'),
+      messages: [{ role: 'user', content: prompt.trim() }],
+    });
+    const textBlock = analysisRes.content.find((b) => b.type === 'text');
+    if (textBlock) {
+      analysis = JSON.parse(textBlock.text);
+    }
+    console.log('[generate] mode:', analysis.mode, '| patterns found:', analysis.patterns?.length ?? 0);
+  } catch (err) {
+    console.error('[generate] Analysis step failed, continuing without pattern map:', err.message);
+  }
+
+  // Inject the pattern map for rewrite mode
+  if (analysis.mode === 'rewrite' && analysis.patterns?.length > 0) {
+    const patternMap = analysis.patterns
+      .map((p) => `[${p.type}] "${p.instance}" → ${p.fix}`)
+      .join('\n');
+    systemParts.push(`Pattern map — every instance must not survive the rewrite:\n${patternMap}\n\n`);
+  }
+
+  systemParts.push(TASK_LAYER);
+  const systemPrompt = systemParts.join('');
+
+  // Step 2: Stream the rewrite/generation with adaptive thinking and the pattern map
+  res.write('data: [REWRITING]\n\n');
+
   try {
     const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 12000,
+      thinking: { type: 'adaptive' },
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt.trim() }],
     });

@@ -306,6 +306,10 @@ function setGenerating(state) {
     : 'Generate';
 }
 
+function setGeneratingLabel(label) {
+  generateBtn.innerHTML = `<span class="ty-spinner" aria-hidden="true"></span>${label}`;
+}
+
 function appendOutput(text) {
   outputEmpty.hidden = true;
 
@@ -385,6 +389,16 @@ generateBtn.addEventListener('click', async () => {
           finalizeOutput();
           setGenerating(false);
           return;
+        }
+
+        if (payload === '[ANALYZING]') {
+          setGeneratingLabel('Analyzing...');
+          continue;
+        }
+
+        if (payload === '[REWRITING]') {
+          setGeneratingLabel('Rewriting...');
+          continue;
         }
 
         if (payload.startsWith('[ERROR]')) {
