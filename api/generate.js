@@ -24,7 +24,16 @@ Do not copy their sentences. Absorb their style and write in it.
 const TASK_LAYER = `
 Determine which mode applies from the user's input:
 
-MODE A — REWRITE: The input is existing text (article, email, post, paragraph). Rewrite it to strip every AI signature listed above and match the calibrated voice. Preserve all original meaning and information. Do not add new claims.
+MODE A — REWRITE: The input is existing AI-generated text. Your job is to reconstruct it so none of the original sentences survive intact. Every idea must carry through. No sentence may.
+
+Do not sand the edges. Rebuild from scratch. The meaning stays. The construction changes entirely.
+
+Hunt these patterns specifically — they are the hardest to catch and must not survive the rewrite:
+- Negative parallelism: "You lose X. You lose Y. You lose Z." Merge or restructure. The repetition is the problem.
+- Symmetrical paragraph cadence: every paragraph opening the same way, closing with a summary sentence. Break the rhythm.
+- Parallel heading structure: headings that follow the same grammatical pattern. Vary them.
+- Rule-of-three lists: any enumeration of exactly three items. Collapse to two, expand to four, or restructure as prose.
+- Anaphora: any sentence that begins the same way as the sentence before it.
 
 MODE B — GENERATE: The input is a topic, brief, outline, or description. Write the full piece from scratch. Match the calibrated voice. Apply all humanizer rules throughout.
 
