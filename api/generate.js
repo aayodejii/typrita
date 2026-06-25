@@ -131,15 +131,14 @@ export default async function handler(req, res) {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  // Step 1: Analyze the text with adaptive thinking to map every AI pattern
+  // Step 1: Analyze the text to map every AI pattern (no thinking needed — structured scan)
   res.write('data: [ANALYZING]\n\n');
 
   let analysis = { mode: 'generate', patterns: [] };
   try {
     const analysisRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 6000,
-      thinking: { type: 'adaptive' },
+      max_tokens: 2000,
       system: [HUMANIZER_RULES, ANALYSIS_PROMPT].join('\n\n'),
       messages: [{ role: 'user', content: prompt.trim() }],
     });
