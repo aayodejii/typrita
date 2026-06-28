@@ -144,7 +144,12 @@ export default async function handler(req, res) {
     });
     const textBlock = analysisRes.content.find((b) => b.type === 'text');
     if (textBlock) {
-      analysis = JSON.parse(textBlock.text);
+      try {
+        analysis = JSON.parse(textBlock.text);
+      } catch {
+        const match = textBlock.text.match(/\{[\s\S]*\}/);
+        if (match) analysis = JSON.parse(match[0]);
+      }
     }
     console.log('[generate] mode:', analysis.mode, '| patterns found:', analysis.patterns?.length ?? 0);
   } catch (err) {
@@ -168,8 +173,7 @@ export default async function handler(req, res) {
   try {
     const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
-      max_tokens: 12000,
-      thinking: { type: 'adaptive' },
+      max_tokens: 5000,
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt.trim() }],
     });
