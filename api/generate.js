@@ -9,16 +9,23 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const SAMPLE_PREFIX = 'typrita-samples/';
 
 const VOICE_CALIBRATION_LAYER = `
-Beyond eliminating AI patterns, calibrate your output to match the specific voice found in the writing samples provided below. These are the user's own words. Study and internalize:
-- Their sentence length patterns (short and direct? long and flowing? mixed?)
-- Their vocabulary range and specific word preferences
-- How they open and close paragraphs
-- Their punctuation habits (fragments? semicolons? parentheticals?)
-- Their level of formality and any characteristic phrases
-- Whether they lean toward directness or nuance
-- How they handle transitions
+The writing samples below are the user's own words. Study them carefully before writing anything.
 
-Do not copy their sentences. Absorb their style and write in it.
+The samples may contain different types of writing — tutorials, walkthroughs, personal essays. Weight the personal essay style most heavily. It reveals the authentic voice. Tutorial-format writing follows genre conventions and should be treated as a weaker signal.
+
+Extract and replicate these specific habits:
+
+PERSONAL GROUNDING: Does the writer anchor technical topics in their own experience? ("I got curious while building", "that bug taught me", "I built this from scratch to understand the difference"). If so, carry that into your output. Write from inside the experience, not as an outside observer explaining it.
+
+SHORT DECLARATIVE CLOSERS: Do sections or paragraphs end with a single flat sentence that lands the point without elaboration? ("Nothing gets silently dropped." / "Nothing exotic."). If so, replicate this. Do not recap or summarize. Land and move on.
+
+PROBLEM FRAMING: Does the writer name problems directly and bluntly before solving them? Study how they title and introduce each problem. Carry that directness into your output.
+
+HUMOR AND PERSONALITY: Look for dry understatement, self-aware asides, or moments where the writer breaks from technical explanation to say something that sounds like a person. Replicate the register, not the exact phrases.
+
+When samples conflict in style, lean into the most personal, least genre-constrained writing. That is the voice to calibrate to.
+
+Do not copy sentences. Absorb how this person thinks and writes, and produce output that could plausibly be theirs.
 `.trim();
 
 const TASK_LAYER = `
