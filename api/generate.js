@@ -144,7 +144,7 @@ export default async function handler(req, res) {
   let analysis = { mode: 'generate', patterns: [] };
   try {
     const analysisRes = await anthropic.messages.create({
-      model: 'claude-opus-4-8',
+      model: 'claude-opus-5-5',
       max_tokens: 2000,
       system: [HUMANIZER_RULES, ANALYSIS_PROMPT].join('\n\n'),
       messages: [{ role: 'user', content: prompt.trim() }],
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
 
   try {
     const stream = anthropic.messages.stream({
-      model: 'claude-opus-4-8',
+      model: 'claude-opus-5-5',
       max_tokens: 5000,
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt.trim() }],
